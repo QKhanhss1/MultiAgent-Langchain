@@ -1,0 +1,84 @@
+# ------------------------
+
+credential.json
+
+# OS & Editor junk
+# ------------------------
+.DS_Store
+Thumbs.db
+*.log
+*.swp
+*.swo
+*.tmp
+
+# VSCode
+.vscode/
+.history/
+
+# ------------------------
+# Python
+# ------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+.env
+.venv/
+venv/
+env/
+pip-log.txt
+
+# Jupyter
+.ipynb_checkpoints/
+
+# ------------------------
+# NodeJS / React / n8n
+# ------------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+dist/
+build/
+.cache/
+.next/
+out/
+
+# ------------------------
+# Environment & Secrets
+# ------------------------
+.env
+.env.*
+*.key
+*.pem
+*.crt
+*.secret
+secrets/
+credentials.json
+
+# ------------------------
+# Coverage / Reports
+# ------------------------
+coverage/
+*.lcov
+*.coverage
+htmlcov/
+
+# ------------------------
+# Misc
+# ------------------------
+.idea/
+*.sqlite3
+*.db
+*.bak
+*.zip
+*.tar
+*.gz
+
+# ------------------------
+# Docker
+# ------------------------
+*.pid
+*.pid.lock
+docker-compose.override.yml
