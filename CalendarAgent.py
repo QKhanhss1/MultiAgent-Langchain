@@ -54,39 +54,64 @@ def get_google_calendar_service():
 # --- CÁC TOOLS CHO GOOGLE CALENDAR ---
 
 @tool
-def list_events(max_results: int = 10) -> str:
+def list_events(start_time: Optional[str] = None, end_time: Optional[str] = None, summary_filter: Optional[str] = None) -> str:
     """
-    Liệt kê các sự kiện sắp tới trong lịch chính của người dùng.
-    'max_results' là số lượng sự kiện tối đa cần hiển thị.
+    Liệt kê các sự kiện trong một khoảng thời gian cụ thể.
+    Nếu không cung cấp thời gian, hàm sẽ tự động lấy các sự kiện trong 7 ngày tới.
+    'start_time' và 'end_time' phải ở định dạng ISO 8601 (ví dụ: '2025-08-06T00:00:00+07:00').
     Hàm này trả về tóm tắt, thời gian bắt đầu, và ID của mỗi sự kiện.
+    Nếu 'summary_filter' được cung cấp, chỉ những sự kiện có tiêu đề chứa từ khóa mới được hiển thị.
     """
     try:
         service = get_google_calendar_service()
-        now = datetime.datetime.utcnow().isoformat() + "Z"  # 'Z' chỉ múi giờ UTC
         
+        # Cải tiến: Nếu không có thời gian, mặc định lấy 7 ngày tới
+        if not start_time:
+            start_dt = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=7)))
+            start_time = start_dt.replace(hour=0, minute=0, second=1).isoformat()  # RFC 3339
+        else:
+            # Chuyển đổi string thành datetime có timezone
+            start_dt = datetime.datetime.fromisoformat(start_time)
+            if start_dt.tzinfo is None:
+                start_dt = start_dt.replace(tzinfo=datetime.timezone(datetime.timedelta(hours=7)))
+            start_time = start_dt.replace(hour=0, minute=0, second=1).isoformat()
+
+        if not end_time:
+            end_dt = start_dt + datetime.timedelta(days=7)
+            end_time = end_dt.isoformat()
+        else:
+            end_dt = datetime.datetime.fromisoformat(end_time)
+            if end_dt.tzinfo is None:
+                end_dt = end_dt.replace(tzinfo=datetime.timezone(datetime.timedelta(hours=7)))
+            end_time = end_dt.isoformat()
+
+        print(f"DEBUG: Tìm kiếm sự kiện từ {start_time} đến {end_time}")
+
+
         events_result = service.events().list(
             calendarId=CALENDAR_ID,
-            timeMin=now,
-            maxResults=max_results,
+            timeMin=start_time,
+            timeMax=end_time,
             singleEvents=True,
-            orderBy="startTime"
+            orderBy='startTime'
         ).execute()
         
         events = events_result.get("items", [])
         if not events:
-            return "Bạn không có sự kiện nào sắp diễn ra."
+            return f"Không có sự kiện nào được tìm thấy trong khoảng thời gian này."
 
         formatted_events = []
         for event in events:
+            id = event.get("id", "Không có ID")
             start = event["start"].get("dateTime", event["start"].get("date"))
             summary = event.get("summary", "Không có tiêu đề")
-            event_id = event.get("id", "Không có ID")
+            notes = event.get("description", "Không có mô tả")
             formatted_events.append(
-                f"- ID: {event_id}\n  Tóm tắt: {summary}\n  Thời gian: {start}"
+                f"- ID: {id}\n  Tóm tắt: {summary}\n  Thời gian: {start}\n  Ghi chú: {notes}"
             )
-        return "Đây là các sự kiện sắp tới của bạn:\n" + "\n\n".join(formatted_events)
+        return "Đây là các sự kiện được tìm thấy:\n" + "\n\n".join(formatted_events)
     except Exception as e:
-        return f"Lỗi khi liệt kê sự kiện: {e}"
+        return f"Lỗi khi liệt kê sự kiện: {e}. Hãy chắc chắn định dạng thời gian là đúng (YYYY-MM-DDTHH:MM:SS)."
 
 @tool
 def create_event(summary: str, start_time: str, end_time: str, description: Optional[str] = None, location: Optional[str] = None) -> str:
@@ -112,10 +137,9 @@ def create_event(summary: str, start_time: str, end_time: str, description: Opti
         return f"Lỗi khi tạo sự kiện: {e}. Hãy chắc chắn định dạng thời gian là đúng (YYYY-MM-DDTHH:MM:SS)."
 
 @tool
-def update_event(event_id: str, new_summary: Optional[str] = None, new_start_time: Optional[str] = None, new_end_time: Optional[str] = None) -> str:
+def update_event(event_id: str, new_summary: Optional[str] = None, new_start_time: Optional[str] = None, new_end_time: Optional[str] = None, new_description: Optional[str] = None) -> str:
     """
     Cập nhật một sự kiện đã có bằng ID của nó.
-    Bạn phải cung cấp 'event_id'.
     Bạn có thể cung cấp các giá trị mới cho 'new_summary', 'new_start_time', 'new_end_time'.
     Định dạng thời gian mới phải là ISO 8601.
     """
@@ -130,7 +154,8 @@ def update_event(event_id: str, new_summary: Optional[str] = None, new_start_tim
             event['start']['dateTime'] = new_start_time
         if new_end_time:
             event['end']['dateTime'] = new_end_time
-            
+        if new_description:
+            event['description'] = new_description
         updated_event = service.events().update(calendarId=CALENDAR_ID, eventId=event_id, body=event).execute()
         return f"Đã cập nhật thành công sự kiện '{updated_event.get('summary')}'."
     except HttpError as e:
@@ -184,12 +209,65 @@ app = workflow.compile()
 
 # --- VÒNG LẶP CHÍNH ĐỂ TƯƠNG TÁC ---
 def main():
-    system_prompt_content = """Bạn là một trợ lý quản lý Lịch Google thông minh và chính xác.
+    current_time = datetime.datetime.now()
+    current_time_str = current_time.isoformat()
+    start_of_day = current_time.replace(hour=0, minute=0, second=0).isoformat()
     
-    QUY TẮC VÀNG:
-    1.  **Xử lý Thời gian:** Khi người dùng cung cấp thời gian dạng tự nhiên (ví dụ: 'ngày mai lúc 3 giờ chiều'), bạn phải tự chuyển đổi nó sang định dạng chuỗi ISO 8601 ('YYYY-MM-DDTHH:MM:SS') trước khi gọi bất kỳ tool nào. Ví dụ, nếu hôm nay là 2025-08-05, 'ngày mai lúc 3 giờ chiều' sẽ là '2025-08-06T15:00:00'.
-    2.  **Xác định ID:** Trước khi CẬP NHẬT hoặc XÓA một sự kiện, bạn BẮT BUỘC phải biết `event_id` của nó. Hãy dùng `list_events` để tìm ID nếu cần. Nếu tìm thấy nhiều sự kiện khớp với mô tả của người dùng, hãy dừng lại và hỏi lại để làm rõ.
-    3.  **Chủ động:** Hãy chủ động dùng tool để hoàn thành yêu cầu. Nếu thiếu thông tin (ví dụ: không có thời gian kết thúc), hãy hỏi lại người dùng.
+    system_prompt_content = f"""## Tổng quan
+Bạn là Calendar Execution Agent TỐC ĐỘ CAO. Nhiệm vụ của bạn là thực thi các yêu cầu về lịch (tạo, cập nhật, xóa sự kiện) một cách nhanh chóng và chính xác.
+
+___
+
+## CÁC CÔNG CỤ (TOOLS)
+
+### Công cụ Google Calendar
+
+- `GetEvents`, `CreateEvent`, `DeleteEvent`, `UpdateEvent`
+** Nếu có email người tham dự ** thì sử dụng:
+- `CreateEventWithAttendee`, `UpdateEventWithAttendee`
+
+## Xử lý thời gian
+- Tuân thủ chuẩn RFC 3339 timestamp.
+- Thời lượng sự kiện mặc định là **1 giờ** nếu không được chỉ định.
+- Quy đổi ngôn ngữ tự nhiên ("hôm nay", "ngày mai","tuần này") dựa trên `{current_time_str}`.
+
+---
+## QUY TẮC XỬ LÝ KẾT QUẢ TÌM KIẾM 
+
+### 1. Xử lý Yêu cầu Chung chung
+- **QUY TẮC:** Nếu yêu cầu của người dùng chỉ là "kiểm tra lịch" hoặc "xem lịch của tôi" mà không có thời gian cụ thể:
+- **Hành động BẮT BUỘC:**
+    1.  Mặc định dùng `GetEvents` để lấy các sự kiện trong **7 ngày tới** (từ `{start_of_day}`).
+    2.  Trình bày kết quả tìm được (hoặc báo là không có sự kiện nào).
+    3.  **DỪNG LẠI.** Nhiệm vụ của bạn đã hoàn thành.
+
+___
+
+## KỊCH BẢN THỰC THI TỐI ƯU (ĐÃ SỬA LỖI LOGIC)
+
+### 1. Tạo Sự Kiện
+- **Logic:** `Chuẩn hóa thời gian -> GetEvents (kiểm tra xung đột) -> CreateEvent... 
+- **Hành động:**
+    *   **Nếu có xung đột:** DỪNG LẠI và báo cho người dùng.
+    *   **Nếu không có lịch nào trong thời gian này:** Thực thi chuỗi `CreateEvent...`
+
+### 2. Cập nhật hoặc Xóa Sự Kiện 
+
+#### Bước 1: Tìm kiếm Sự kiện Mục tiêu
+- **Hành động:** Dùng `GetEvents` với các từ khóa từ yêu cầu của người dùng (ví dụ: tên sự kiện, thời gian gần đúng).
+
+#### Bước 2: Xử lý Kết quả Tìm kiếm
+- **NẾU** kết quả trả về là **1 sự kiện duy nhất**:
+    - Chuyển sang Bước 3.
+- **NẾU** kết quả trả về là **NHIỀU hơn 1 sự kiện**:
+    - DỪNG LẠI. Liệt kê các sự kiện tìm thấy và hỏi người dùng để xác nhận.
+- **NẾU** kết quả trả về là **danh sách rỗng `[]`**:
+    - DỪNG LẠI. Báo cho người dùng: "Tôi không tìm thấy sự kiện nào khớp với yêu cầu của bạn."
+
+#### Bước 3: Thực thi 
+- (Chỉ thực hiện nếu Bước 2 tìm thấy 1 sự kiện duy nhất)
+- **Hành động:**
+    1.  Thực hiện `UpdateEvent` hoặc `DeleteEvent` với `eventId` đã tìm được.
     """
     system_prompt = SystemMessage(content=system_prompt_content)
     conversation_history = []
