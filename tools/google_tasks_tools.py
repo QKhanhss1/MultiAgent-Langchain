@@ -9,7 +9,8 @@ from langchain_core.tools import tool
 # Import hàm xác thực chung và cấu hình
 from .common_auth import get_google_service
 from config import TASK_LIST_ID
-
+SERVICE_NAME = "tasks"
+VERSION = "v1"
 def _format_due_date(date_str: str) -> Optional[str]:
     """Chuyển đổi ngày YYYY-MM-DD thành định dạng RFC3339 mà Google API yêu cầu."""
     try:
@@ -27,7 +28,7 @@ def list_tasks() -> str:
     Liệt kê các công việc trong danh sách mặc định.
     """
     try:
-        service = get_google_service()
+        service = get_google_service(SERVICE_NAME, VERSION)
         results = service.tasks().list(
             tasklist=TASK_LIST_ID, 
             showCompleted='true',
@@ -61,7 +62,7 @@ def create_task(title: str, notes: Optional[str] = None, due_date: Optional[str]
     if not title:
         return "Lỗi: Không thể tạo task mà không có tiêu đề."
     try:
-        service = get_google_service()
+        service = get_google_service(SERVICE_NAME, VERSION)
         task_body = {"title": title}
         if notes:
             task_body["notes"] = notes
@@ -89,7 +90,7 @@ def update_task(task_id: str, new_title: Optional[str] = None, new_notes: Option
     if not task_id:
         return "Lỗi: Cần phải có ID của công việc để cập nhật."
     try:
-        service = get_google_service()
+        service = get_google_service(SERVICE_NAME, VERSION)
         update_body = {}
         if new_title:
             update_body['title'] = new_title
@@ -118,7 +119,7 @@ def delete_task(task_id: str) -> str:
     if not task_id:
         return "Lỗi: Cần phải có ID của công việc để xóa."
     try:
-        service = get_google_service()
+        service = get_google_service(SERVICE_NAME, VERSION)
         service.tasks().delete(tasklist=TASK_LIST_ID, task=task_id).execute()
         return f"Đã xóa thành công công việc với ID: {task_id}."
     except HttpError as e:

@@ -13,7 +13,8 @@ from langchain_core.tools import tool
 from config import SCOPES, CALENDAR_ID, TOKEN_FILE, CREDENTIALS_FILE
 from .common_auth import get_google_service
 # --- CÁC TOOLS CHO GOOGLE CALENDAR ---
-
+SERVICE_NAME = "calendar"
+VERSION = "v3"
 @tool
 def list_events(start_time: Optional[str] = None, end_time: Optional[str] = None) -> str:
     """
@@ -22,7 +23,7 @@ def list_events(start_time: Optional[str] = None, end_time: Optional[str] = None
     'start_time' và 'end_time' phải ở định dạng ISO 8601 (ví dụ: '2025-08-06T00:00:00+07:00').
     Hàm này trả về tóm tắt, thời gian bắt đầu, và ID của mỗi sự kiện.    """
     try:
-        service = get_google_service()
+        service = get_google_service(SERVICE_NAME, VERSION)
         
         # Cải tiến: Nếu không có thời gian, mặc định lấy 7 ngày tới
         if not start_time:
@@ -82,7 +83,7 @@ def create_event(summary: str, start_time: str, end_time: str, description: Opti
     'description', 'location' và reminders là các thông tin tùy chọn.
     """
     try:
-        service = get_google_service()
+        service = get_google_service(SERVICE_NAME, VERSION)
         event_body = {
             "summary": summary,
             "location": location,
@@ -105,7 +106,7 @@ def update_event(event_id: str, new_summary: Optional[str] = None, new_start_tim
     Định dạng thời gian mới phải là ISO 8601.
     """
     try:
-        service = get_google_service()
+        service = get_google_service(SERVICE_NAME, VERSION)
         # Đầu tiên, lấy sự kiện hiện tại để không ghi đè mất các thông tin khác
         event = service.events().get(calendarId=CALENDAR_ID, eventId=event_id).execute()
 
@@ -137,7 +138,7 @@ def update_event(event_id: str, new_summary: Optional[str] = None, new_start_tim
 def delete_event(event_id: str) -> str:
     """Xóa một sự kiện bằng ID của nó. Hành động này không thể hoàn tác."""
     try:
-        service = get_google_service()
+        service = get_google_service(SERVICE_NAME, VERSION)
         service.events().delete(calendarId=CALENDAR_ID, eventId=event_id).execute()
         return f"Đã xóa thành công sự kiện với ID: {event_id}."
     except HttpError as e:

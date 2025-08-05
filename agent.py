@@ -19,7 +19,7 @@ def create_agent(tools: list):
     model = ChatGoogleGenerativeAI(
         model=MODEL_NAME, 
         temperature=MODEL_TEMPERATURE,
-        convert_system_message_to_human=True
+
     ).bind_tools(tools)
 
     def should_continue(state: AgentState):

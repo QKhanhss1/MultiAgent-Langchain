@@ -24,7 +24,7 @@ def load_and_format_prompt(prompt_file: str):
     """Tải prompt từ file và điền các giá trị động."""
     with open(prompt_file, "r", encoding="utf-8") as f:
         prompt_template = f.read()
-    return prompt_template.format(current_time=datetime.datetime.now().isoformat())
+    return prompt_template.format(current_time=datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=7))), start_of_day=datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=7))).replace(hour=0, minute=0, second=0, microsecond=0).isoformat())
 
 def main():
     """Hàm chính để chọn và chạy Agent."""
