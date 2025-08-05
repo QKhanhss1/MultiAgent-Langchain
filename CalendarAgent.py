@@ -3,7 +3,7 @@
 # =================================================================
 import os.path
 import datetime
-from typing import Annotated, Sequence, TypedDict, Optional
+from typing import Annotated, Sequence, TypedDict, Optional, List
 
 from dotenv import load_dotenv
 from google.auth.transport.requests import Request
@@ -114,12 +114,13 @@ def list_events(start_time: Optional[str] = None, end_time: Optional[str] = None
         return f"Lỗi khi liệt kê sự kiện: {e}. Hãy chắc chắn định dạng thời gian là đúng (YYYY-MM-DDTHH:MM:SS)."
 
 @tool
-def create_event(summary: str, start_time: str, end_time: str, description: Optional[str] = None, location: Optional[str] = None) -> str:
+def create_event(summary: str, start_time: str, end_time: str, description: Optional[str] = None, location: Optional[str] = None, reminders: Optional[dict] = None, attendees: Optional[List[str]] = None) -> str:
     """
     Tạo một sự kiện mới trong lịch chính.
     'summary' là tiêu đề của sự kiện.
+    'attendees' là danh sách email của người tham dự (nếu có).
     'start_time' và 'end_time' là thời gian bắt đầu và kết thúc, BẮT BUỘC phải có định dạng ISO 8601 (ví dụ: '2025-08-06T15:00:00' hoặc '2025-08-06T15:00:00+07:00' cho múi giờ Việt Nam).
-    'description' và 'location' là các thông tin tùy chọn.
+    'description', 'location' và reminders là các thông tin tùy chọn.
     """
     try:
         service = get_google_calendar_service()
@@ -129,7 +130,8 @@ def create_event(summary: str, start_time: str, end_time: str, description: Opti
             "description": description,
             "start": {"dateTime": start_time, "timeZone": "Asia/Ho_Chi_Minh"},
             "end": {"dateTime": end_time, "timeZone": "Asia/Ho_Chi_Minh"},
-            "reminders": {"useDefault": True},
+            "reminders": reminders if reminders else {"useDefault": True},
+            "attendees": [{"email": email} for email in attendees] if attendees else []
         }
         created_event = service.events().insert(calendarId=CALENDAR_ID, body=event_body).execute()
         return f"Đã tạo thành công sự kiện '{created_event.get('summary')}' vào lúc {created_event['start'].get('dateTime')}."
@@ -137,10 +139,10 @@ def create_event(summary: str, start_time: str, end_time: str, description: Opti
         return f"Lỗi khi tạo sự kiện: {e}. Hãy chắc chắn định dạng thời gian là đúng (YYYY-MM-DDTHH:MM:SS)."
 
 @tool
-def update_event(event_id: str, new_summary: Optional[str] = None, new_start_time: Optional[str] = None, new_end_time: Optional[str] = None, new_description: Optional[str] = None) -> str:
+def update_event(event_id: str, new_summary: Optional[str] = None, new_start_time: Optional[str] = None, new_end_time: Optional[str] = None, new_description: Optional[str] = None, new_location: Optional[str] = None, new_reminders: Optional[dict] = None, new_attendees: Optional[List[str]] = None) -> str:
     """
     Cập nhật một sự kiện đã có bằng ID của nó.
-    Bạn có thể cung cấp các giá trị mới cho 'new_summary', 'new_start_time', 'new_end_time'.
+    Bạn có thể cung cấp các giá trị mới cho 'new_summary', 'new_start_time', 'new_end_time', 'new_description', 'new_location', 'new_reminders', 'new_attendees'.
     Định dạng thời gian mới phải là ISO 8601.
     """
     try:
@@ -156,6 +158,13 @@ def update_event(event_id: str, new_summary: Optional[str] = None, new_start_tim
             event['end']['dateTime'] = new_end_time
         if new_description:
             event['description'] = new_description
+        if new_location:
+            event['location'] = new_location
+        if new_reminders:
+            event['reminders'] = new_reminders
+        if new_attendees:
+            event['attendees'] = [{"email": email} for email in new_attendees]
+
         updated_event = service.events().update(calendarId=CALENDAR_ID, eventId=event_id, body=event).execute()
         return f"Đã cập nhật thành công sự kiện '{updated_event.get('summary')}'."
     except HttpError as e:
@@ -222,9 +231,9 @@ ___
 
 ### Công cụ Google Calendar
 
-- `GetEvents`, `CreateEvent`, `DeleteEvent`, `UpdateEvent`
+- `list_events`, `create_event`, `delete_event`, `update_event`
 ** Nếu có email người tham dự ** thì sử dụng:
-- `CreateEventWithAttendee`, `UpdateEventWithAttendee`
+- `create_event` với tham số `attendees`, `update_event` với tham số `new_attendees`
 
 ## Xử lý thời gian
 - Tuân thủ chuẩn RFC 3339 timestamp.
@@ -237,7 +246,7 @@ ___
 ### 1. Xử lý Yêu cầu Chung chung
 - **QUY TẮC:** Nếu yêu cầu của người dùng chỉ là "kiểm tra lịch" hoặc "xem lịch của tôi" mà không có thời gian cụ thể:
 - **Hành động BẮT BUỘC:**
-    1.  Mặc định dùng `GetEvents` để lấy các sự kiện trong **7 ngày tới** (từ `{start_of_day}`).
+    1.  Mặc định dùng `list_events` để lấy các sự kiện trong **7 ngày tới** (từ `{start_of_day}`).
     2.  Trình bày kết quả tìm được (hoặc báo là không có sự kiện nào).
     3.  **DỪNG LẠI.** Nhiệm vụ của bạn đã hoàn thành.
 
@@ -246,15 +255,15 @@ ___
 ## KỊCH BẢN THỰC THI TỐI ƯU (ĐÃ SỬA LỖI LOGIC)
 
 ### 1. Tạo Sự Kiện
-- **Logic:** `Chuẩn hóa thời gian -> GetEvents (kiểm tra xung đột) -> CreateEvent... 
+- **Logic:** `Chuẩn hóa thời gian -> list_events (kiểm tra xung đột) -> create_event... 
 - **Hành động:**
     *   **Nếu có xung đột:** DỪNG LẠI và báo cho người dùng.
-    *   **Nếu không có lịch nào trong thời gian này:** Thực thi chuỗi `CreateEvent...`
+    *   **Nếu không có lịch nào trong thời gian này:** Thực thi chuỗi `create_event...`
 
 ### 2. Cập nhật hoặc Xóa Sự Kiện 
 
 #### Bước 1: Tìm kiếm Sự kiện Mục tiêu
-- **Hành động:** Dùng `GetEvents` với các từ khóa từ yêu cầu của người dùng (ví dụ: tên sự kiện, thời gian gần đúng).
+- **Hành động:** Dùng `list_events` với các từ khóa từ yêu cầu của người dùng (ví dụ: tên sự kiện, thời gian gần đúng).
 
 #### Bước 2: Xử lý Kết quả Tìm kiếm
 - **NẾU** kết quả trả về là **1 sự kiện duy nhất**:
@@ -267,7 +276,7 @@ ___
 #### Bước 3: Thực thi 
 - (Chỉ thực hiện nếu Bước 2 tìm thấy 1 sự kiện duy nhất)
 - **Hành động:**
-    1.  Thực hiện `UpdateEvent` hoặc `DeleteEvent` với `eventId` đã tìm được.
+    1.  Thực hiện `update_event` hoặc `delete_event` với `eventId` đã tìm được.
     """
     system_prompt = SystemMessage(content=system_prompt_content)
     conversation_history = []
