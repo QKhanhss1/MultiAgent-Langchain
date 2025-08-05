@@ -54,14 +54,12 @@ def get_google_calendar_service():
 # --- CÁC TOOLS CHO GOOGLE CALENDAR ---
 
 @tool
-def list_events(start_time: Optional[str] = None, end_time: Optional[str] = None, summary_filter: Optional[str] = None) -> str:
+def list_events(start_time: Optional[str] = None, end_time: Optional[str] = None) -> str:
     """
     Liệt kê các sự kiện trong một khoảng thời gian cụ thể.
     Nếu không cung cấp thời gian, hàm sẽ tự động lấy các sự kiện trong 7 ngày tới.
     'start_time' và 'end_time' phải ở định dạng ISO 8601 (ví dụ: '2025-08-06T00:00:00+07:00').
-    Hàm này trả về tóm tắt, thời gian bắt đầu, và ID của mỗi sự kiện.
-    Nếu 'summary_filter' được cung cấp, chỉ những sự kiện có tiêu đề chứa từ khóa mới được hiển thị.
-    """
+    Hàm này trả về tóm tắt, thời gian bắt đầu, và ID của mỗi sự kiện.    """
     try:
         service = get_google_calendar_service()
         
@@ -278,8 +276,10 @@ ___
 - **Hành động:**
     1.  Thực hiện `update_event` hoặc `delete_event` với `eventId` đã tìm được.
     """
-    system_prompt = SystemMessage(content=system_prompt_content)
-    conversation_history = []
+    
+    # Convert system message to human message to avoid deprecation warning
+    system_as_human = SystemMessage(content=f"SYSTEM INSTRUCTIONS: {system_prompt_content}")
+    conversation_history = [system_as_human]
 
     print("Chào bạn, tôi là trợ lý Lịch Google. (gõ 'exit' để thoát)")
 
@@ -290,7 +290,7 @@ ___
             break
 
         conversation_history.append(HumanMessage(content=user_input))
-        messages_for_graph = [system_prompt] + conversation_history
+        messages_for_graph = conversation_history
         inputs = {"messages": messages_for_graph}
         
         final_state = app.invoke(inputs)
