@@ -7,7 +7,8 @@ from googleapiclient.errors import HttpError
 from langchain_core.tools import tool
 
 # Import hàm xác thực chung và cấu hình
-from .common_auth import get_google_service
+# from .common_auth import get_google_service
+from .deploy import get_google_service
 from config import TASK_LIST_ID
 SERVICE_NAME = "tasks"
 VERSION = "v1"
