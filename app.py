@@ -8,7 +8,7 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from agent import create_agent
 from tools.google_tasks_tools import tasks_tools
 from tools.google_calendar_tools import calendar_tools
-
+from tools.google_gmail_tools import gmail_tools
 # --- Caching: Tối ưu hiệu suất ---
 # Streamlit sẽ chạy lại code từ đầu mỗi khi có tương tác.
 # @st.cache_resource đảm bảo rằng "nhà máy" tạo agent và các tài nguyên đắt đỏ khác
@@ -20,6 +20,8 @@ def get_agent(agent_type: str):
         tools = tasks_tools
     elif agent_type == "Calendar":
         tools = calendar_tools
+    elif agent_type == "Gmail": 
+        tools = gmail_tools
     else:
         return None
     return create_agent(tools)
@@ -48,7 +50,7 @@ with st.sidebar:
     st.header("Cấu hình Agent")
     agent_choice = st.selectbox(
         "Chọn Agent để tương tác:",
-        ("--- Vui lòng chọn ---", "Tasks", "Calendar")
+        ("--- Vui lòng chọn ---", "Tasks", "Calendar", "Gmail")
     )
 
 # --- Logic chính của ứng dụng ---

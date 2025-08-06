@@ -3,7 +3,8 @@
 # --- Cấu hình API của Google ---
 SCOPES = [
     "https://www.googleapis.com/auth/calendar",
-    "https://www.googleapis.com/auth/calendar"
+    "https://www.googleapis.com/auth/tasks",
+    "https://www.googleapis.com/auth/gmail.readonly"
 ]
 # ID đặc biệt cho các service
 TASK_LIST_ID = '@default'

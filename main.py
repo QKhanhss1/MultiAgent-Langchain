@@ -6,17 +6,20 @@ from dotenv import load_dotenv
 from agent import create_agent
 from tools.google_tasks_tools import tasks_tools
 from tools.google_calendar_tools import calendar_tools
-
+from tools.google_gmail_tools import gmail_tools
 def select_agent():
     """Cho phép người dùng chọn agent để tương tác."""
     while True:
-        choice = input("Bạn muốn sử dụng Agent nào? (1: Tasks, 2: Calendar): ")
+        choice = input("Bạn muốn sử dụng Agent nào? (1: Tasks, 2: Calendar, 3: Gmail): ")
         if choice == '1':
             print("\nĐang khởi tạo Task Agent...")
             return tasks_tools, "prompts/tasks_agent_prompt.md"
         elif choice == '2':
             print("\nĐang khởi tạo Calendar Agent...")
             return calendar_tools, "prompts/calendar_agent_prompt.md"
+        elif choice == '3': # <-- THÊM LỰA CHỌN GMAIL
+            print("\nĐang khởi tạo Gmail Agent...")
+            return gmail_tools, "prompts/gmail_agent_prompt.md"
         else:
             print("Lựa chọn không hợp lệ. Vui lòng nhập 1 hoặc 2.")
 
