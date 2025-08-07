@@ -5,7 +5,7 @@ import datetime
 from langchain_core.messages import SystemMessage, HumanMessage
 
 # Import các thành phần đã được tái cấu trúc
-from agent import create_agent
+from agent_graph import create_agent
 from tools.google_tasks_tools import tasks_tools
 from tools.google_calendar_tools import calendar_tools
 from tools.google_gmail_tools import gmail_tools

@@ -4,7 +4,6 @@ from langgraph.graph import StateGraph, END
 from langgraph.prebuilt import ToolNode
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.graph.message import add_messages
-from tools.google_calendar_tools import calendar_tools
 from config import MODEL_NAME, MODEL_TEMPERATURE
 import dotenv
 dotenv.load_dotenv()

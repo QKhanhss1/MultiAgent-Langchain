@@ -5,7 +5,7 @@ from langchain_core.tools import tool
 
 # Import hàm xác thực chung
 # from .common_auth import get_google_service
-from .deploy import get_google_service
+from tools.auth.deploy import get_google_service
 VERSION = "v1"
 SERVICE_NAME = "gmail"
 @tool

@@ -12,7 +12,7 @@ from langchain_core.tools import tool
 # Import cấu hình từ file config.py
 from config import SCOPES, CALENDAR_ID, TOKEN_FILE, CREDENTIALS_FILE
 # from .common_auth import get_google_service
-from .deploy import get_google_service
+from tools.auth.deploy import get_google_service
 # --- CÁC TOOLS CHO GOOGLE CALENDAR ---
 SERVICE_NAME = "calendar"
 VERSION = "v3"

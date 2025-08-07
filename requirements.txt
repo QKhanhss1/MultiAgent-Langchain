@@ -6,3 +6,6 @@ langchain
 langchain-google-genai
 langgraph
 python-dotenv
+fastapi
+uvicorn[standard]
+pydantic
