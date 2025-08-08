@@ -15,5 +15,5 @@ TOKEN_FILE = 'token.json'
 CREDENTIALS_FILE = 'credentials.json'
 # --- Cấu hình Model ---
 # Chọn model mạnh mẽ để xử lý các yêu cầu phức tạp về thời gian
-MODEL_NAME = "gemini-2.5-flash" 
+MODEL_NAME = "gemini-2.5-flash-lite"
 MODEL_TEMPERATURE = 0.2
