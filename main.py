@@ -51,14 +51,22 @@ def get_agent_tools_and_prompt(agent_type: str):
     
     return agent_map[agent_type]
 
-def load_and_format_prompt(prompt_file: str):
+def load_and_format_prompt(prompt_file: str, access_token: str = None):
     """Tải prompt từ file và điền các giá trị động."""
     with open(prompt_file, "r", encoding="utf-8") as f:
         prompt_template = f.read()
-    return prompt_template.format(
+    
+    # Add token instruction to the prompt
+    token_instruction = ""
+    if access_token:
+        token_instruction = f"\n\n**QUAN TRỌNG: Bạn có access token sau để gọi Google APIs: {access_token}**"
+    
+    formatted_prompt = prompt_template.format(
         current_time=datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=7))), 
         start_of_day=datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=7))).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
-    )
+    ) + token_instruction
+    
+    return formatted_prompt
 
 # API Endpoints
 @app.get("/", response_model=Dict[str, str])
@@ -94,8 +102,8 @@ async def chat_with_agent(request: ChatRequest):
         # Create agent
         agent_app = create_agent_with_token(tools, request.token)
         
-        # Load and format prompt
-        formatted_prompt = load_and_format_prompt(prompt_file)
+        # Load and format prompt with token
+        formatted_prompt = load_and_format_prompt(prompt_file, request.token)
         system_prompt = SystemMessage(content=formatted_prompt)
         
         # Get or create conversation history
