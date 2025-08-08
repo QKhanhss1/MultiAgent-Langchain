@@ -7,7 +7,7 @@ import uvicorn
 from langchain_core.messages import SystemMessage, HumanMessage
 from dotenv import load_dotenv
 
-from agent_graph import create_agent
+from agent_graph import create_agent, create_agent_with_token
 from tools.google_tasks_tools import tasks_tools
 from tools.google_calendar_tools import calendar_tools
 from tools.google_gmail_tools import gmail_tools
@@ -92,7 +92,7 @@ async def chat_with_agent(request: ChatRequest):
         tools, prompt_file = get_agent_tools_and_prompt(request.agent_type)
         
         # Create agent
-        agent_app = create_agent(tools)
+        agent_app = create_agent_with_token(tools, request.token)
         
         # Load and format prompt
         formatted_prompt = load_and_format_prompt(prompt_file)
@@ -198,8 +198,14 @@ def cli_mode():
             continue
             
         try:
+            # For CLI mode, we need to get a token from user
+            token = input("Enter your Google access token: ").strip()
+            if not token:
+                print("Error: Access token is required for API access.")
+                continue
+                
             tools, prompt_file = get_agent_tools_and_prompt(agent_type)
-            agent_app = create_agent(tools)
+            agent_app = create_agent_with_token(tools, token)
             formatted_prompt = load_and_format_prompt(prompt_file)
             system_prompt = SystemMessage(content=formatted_prompt)
             

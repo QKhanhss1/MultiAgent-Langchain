@@ -1,18 +1,32 @@
 import base64
 from typing import Optional, List
+
+from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from langchain_core.tools import tool
 
-# Import hàm xác thực chung
-# from .common_auth import get_google_service
-from tools.auth.deploy import get_google_service
 VERSION = "v1"
 SERVICE_NAME = "gmail"
-@tool
-def list_labels() -> str:
-    """Liệt kê tất cả các nhãn (labels) có trong hộp thư của người dùng."""
+
+def get_gmail_service_with_token(access_token: str):
+    """Create Google Gmail service using access token."""
     try:
-        service = get_google_service(SERVICE_NAME, VERSION)
+        # Create credentials object from access token
+        credentials = Credentials(token=access_token)
+        service = build(SERVICE_NAME, VERSION, credentials=credentials)
+        return service
+    except Exception as e:
+        raise Exception(f"Failed to create gmail service: {str(e)}")
+
+@tool
+def list_labels(access_token: str) -> str:
+    """
+    Liệt kê tất cả các nhãn (labels) có trong hộp thư của người dùng.
+    'access_token' là Google OAuth access token.
+    """
+    try:
+        service = get_gmail_service_with_token(access_token)
         results = service.users().labels().list(userId='me').execute()
         labels = results.get('labels', [])
 
@@ -22,10 +36,11 @@ def list_labels() -> str:
         label_names = [label['name'] for label in labels]
         return "Đây là danh sách các nhãn của bạn:\n- " + "\n- ".join(label_names)
     except Exception as e:
-        return f"Lỗi khi liệt kê nhãn: {e}"
+        return f"Lỗi khi liệt kê nhãn: {e}. Hãy chắc chắn access token còn hiệu lực."
 
 @tool
 def list_emails(
+    access_token: str,
     query: Optional[str] = None, 
     from_sender: Optional[str] = None, 
     label: Optional[str] = None, 
@@ -34,6 +49,7 @@ def list_emails(
 ) -> str:
     """
     Tìm kiếm và liệt kê các email với các bộ lọc chi tiết.
+    'access_token' là Google OAuth access token.
     - query: Các từ khóa chung để tìm trong nội dung email.
     - from_sender: Lọc email từ một người gửi cụ thể (ví dụ: 'boss@example.com').
     - label: Lọc email theo nhãn cụ thể, hoạt động cho cả nhãn hệ thống và nhãn người dùng (ví dụ: 'INBOX', 'Việc Quan Trọng', 'Project X').
@@ -42,7 +58,7 @@ def list_emails(
     Hàm trả về Tiêu đề, Người gửi, và ID của mỗi email.
     """
     try:
-        service = get_google_service(SERVICE_NAME, VERSION)
+        service = get_gmail_service_with_token(access_token)
         
         # --- Xây dựng chuỗi query động từ các tham số (Phiên bản đơn giản và mạnh mẽ) ---
         search_parts = []
@@ -58,7 +74,6 @@ def list_emails(
             search_parts.append("is:unread")
             
         search_query = " ".join(search_parts) if search_parts else 'in:inbox'
-        print(f"DEBUG: Gmail search query constructed: '{search_query}'")
 
         # Lấy danh sách ID của các message khớp với query
         response = service.users().messages().list(userId='me', q=search_query, maxResults=max_results).execute()
@@ -81,16 +96,17 @@ def list_emails(
         return "Đây là các email được tìm thấy:\n\n" + "\n\n".join(email_previews)
 
     except Exception as e:
-        return f"Lỗi khi tìm kiếm email: {e}"
+        return f"Lỗi khi tìm kiếm email: {e}. Hãy chắc chắn access token còn hiệu lực."
 
 @tool
-def read_email_content(email_id: str) -> str:
+def read_email_content(access_token: str, email_id: str) -> str:
     """
     Đọc nội dung chi tiết của một email cụ thể bằng ID của nó.
+    'access_token' là Google OAuth access token.
     Hàm này sẽ cố gắng trích xuất phần nội dung dạng text/plain của email.
     """
     try:
-        service = get_google_service(SERVICE_NAME, VERSION)
+        service = get_gmail_service_with_token(access_token)
         message = service.users().messages().get(userId='me', id=email_id, format='full').execute()
         
         payload = message.get('payload', {})
@@ -119,13 +135,16 @@ def read_email_content(email_id: str) -> str:
             return f"Lỗi: Không tìm thấy email với ID '{email_id}'."
         return f"Lỗi HTTP khi đọc email: {e}"
     except Exception as e:
-        return f"Lỗi không xác định khi đọc email: {e}"
+        return f"Lỗi không xác định khi đọc email: {e}. Hãy chắc chắn access token còn hiệu lực."
 
 @tool
-def list_drafts(max_results: int = 5) -> str:
-    """Liệt kê các thư nháp chưa gửi trong hộp thư của người dùng."""
+def list_drafts(access_token: str, max_results: int = 5) -> str:
+    """
+    Liệt kê các thư nháp chưa gửi trong hộp thư của người dùng.
+    'access_token' là Google OAuth access token.
+    """
     try:
-        service = get_google_service(SERVICE_NAME, VERSION)
+        service = get_gmail_service_with_token(access_token)
         response = service.users().drafts().list(userId='me', maxResults=max_results).execute()
         drafts = response.get('drafts', [])
         
@@ -143,16 +162,17 @@ def list_drafts(max_results: int = 5) -> str:
         
         return "Đây là danh sách các thư nháp của bạn:\n\n" + "\n\n".join(draft_previews)
     except Exception as e:
-        return f"Lỗi khi liệt kê thư nháp: {e}"
+        return f"Lỗi khi liệt kê thư nháp: {e}. Hãy chắc chắn access token còn hiệu lực."
 
 @tool
-def read_draft_content(draft_id: str) -> str:
+def read_draft_content(access_token: str, draft_id: str) -> str:
     """
     Đọc nội dung chi tiết của một thư nháp cụ thể bằng ID của nó.
+    'access_token' là Google OAuth access token.
     Hàm này trả về người nhận, tiêu đề, và nội dung của thư nháp.
     """
     try:
-        service = get_google_service(SERVICE_NAME, VERSION)
+        service = get_gmail_service_with_token(access_token)
 
         # Lấy thông tin chi tiết của thư nháp
         draft = service.users().drafts().get(userId='me', id=draft_id, format='full').execute()
@@ -192,10 +212,7 @@ def read_draft_content(draft_id: str) -> str:
             return f"Lỗi: Không tìm thấy thư nháp với ID '{draft_id}'."
         return f"Lỗi HTTP khi đọc thư nháp: {e}"
     except Exception as e:
-        return f"Lỗi không xác định khi đọc thư nháp: {e}"
-
-
-# ... (tool list_drafts giữ nguyên) ...
+        return f"Lỗi không xác định khi đọc thư nháp: {e}. Hãy chắc chắn access token còn hiệu lực."
 
 # Cập nhật danh sách tool để export
 gmail_tools = [list_labels, list_emails, read_email_content, list_drafts, read_draft_content]
