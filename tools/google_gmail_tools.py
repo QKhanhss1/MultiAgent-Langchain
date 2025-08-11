@@ -107,8 +107,8 @@ def read_email_content(access_token: str, email_id: str) -> str:
     """
     try:
         service = get_gmail_service_with_token(access_token)
-        message = service.users().messages().get(userId='me', id=email_id, format='full').execute()
-        
+        message = service.users().messages().get(userId='me', id=email_id, format='minimal').execute()
+
         payload = message.get('payload', {})
         parts = payload.get('parts', [])
         
@@ -128,8 +128,8 @@ def read_email_content(access_token: str, email_id: str) -> str:
         # Dữ liệu được mã hóa base64url, cần giải mã
         decoded_data = base64.urlsafe_b64decode(body_data).decode('utf-8')
         
-        snippet = message.get('snippet', 'Không có tóm tắt.')
-        return f"Tóm tắt ngắn: {snippet}\n\nNội dung đầy đủ:\n---\n{decoded_data[:2000]}..." # Giới hạn độ dài để tránh quá tải
+        # Minimal format - just return the content
+        return decoded_data[:1000]  # Limit to 1000 characters for minimal display
     except HttpError as e:
         if e.resp.status == 404:
             return f"Lỗi: Không tìm thấy email với ID '{email_id}'."
@@ -198,14 +198,10 @@ def read_draft_content(access_token: str, draft_id: str) -> str:
         content = "Nội dung trống."
         if body_data:
             decoded_data = base64.urlsafe_b64decode(body_data).decode('utf-8')
-            content = decoded_data
+            content = decoded_data[:1000]  # Limit to 1000 characters for minimal display
             
-        return (
-            f"Người nhận: {recipient}\n"
-            f"Tiêu đề: {subject}\n"
-            f"--- Nội dung ---\n"
-            f"{content}"
-        )
+        # Minimal format - simple output
+        return f"To: {recipient} | Subject: {subject} | Content: {content}"
 
     except HttpError as e:
         if e.resp.status == 404:

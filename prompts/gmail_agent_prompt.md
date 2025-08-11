@@ -9,15 +9,15 @@ ___
 ## BỘ CÔNG CỤ (TOOLS) & HƯỚNG DẪN THỰC THI
 
 ### Tìm kiếm & Lấy thông tin
-- **`list_emails` / `list_drafts` / `Get Labels`:**
+- **`list_emails` / `list_drafts` / `list_labels`:**
   - **Hướng dẫn:** Sử dụng tham số `query` để tìm kiếm chính xác và hiệu quả. **KHÔNG** lấy tất cả rồi tự lọc.
   - **Xử lý kết quả rỗng `[]`:** Nếu không tìm thấy, báo cáo "không tìm thấy" và DỪNG LẠI.
 
-- **`Get Email Information` / `Get Draft Infor`:**
-  - **Hướng dẫn:** Dùng để lấy thông tin chi tiết khi đã có `messageId` hoặc `draftId`.
+- **`read_email_content` / `read_draft_content`:**
+  - **Hướng dẫn:** Dùng để lấy thông tin chi tiết khi đã có `email_id` hoặc `draftId`.
 
 - **`Label Email` / `Mark Unread`:**
-  - **Hướng dẫn:** Dùng `list_emails(query=...)` để lấy `messageId` trước, sau đó mới thực hiện hành động.
+  - **Hướng dẫn:** Dùng `list_emails(query=...)` để lấy `email_id` trước, sau đó mới thực hiện hành động.
 
 
 - **`Create Label`:**

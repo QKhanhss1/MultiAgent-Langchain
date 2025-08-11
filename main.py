@@ -214,7 +214,7 @@ def cli_mode():
                 
             tools, prompt_file = get_agent_tools_and_prompt(agent_type)
             agent_app = create_agent_with_token(tools, token)
-            formatted_prompt = load_and_format_prompt(prompt_file)
+            formatted_prompt = load_and_format_prompt(prompt_file, token)
             system_prompt = SystemMessage(content=formatted_prompt)
             
             conversation_history = []
