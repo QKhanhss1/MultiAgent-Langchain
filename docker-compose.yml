@@ -5,7 +5,7 @@ services:
     build: .
     container_name: multi-agent-google-api
     ports:
-      - "8000:8000"
+      - "9000:9000"
     volumes:
       # Mount environment file
       - ./.env:/app/.env:ro
@@ -14,10 +14,10 @@ services:
     environment:
       - PYTHONPATH=/app
       - HOST=0.0.0.0
-      - PORT=8000
+      - PORT=9000
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      test: ["CMD", "curl", "-f", "http://localhost:9000/"]
       interval: 30s
       timeout: 10s
       retries: 3

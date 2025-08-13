@@ -9,14 +9,14 @@ Your Multi-Agent API is successfully running in Docker with token-based authenti
 docker-compose up -d
 
 # Test  
-curl http://localhost:8000/agents
+curl http://localhost:9000/agents
 
 # Stop
 docker-compose down
 ```
 
 ## 📡 API URL
-http://localhost:8000/docs
+http://localhost:9000/docs
 
 ## � Usage
 Send requests with your Google OAuth access token:

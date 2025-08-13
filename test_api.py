@@ -2,7 +2,11 @@ import requests
 import json
 
 # API Base URL
-BASE_URL = "http://localhost:8000"
+import requests
+import json
+
+# Configuration
+BASE_URL = "http://localhost:9000"
 
 def test_api():
     """Test the Multi-Agent API endpoints."""

@@ -27,11 +27,11 @@ RUN pip install --no-cache-dir --upgrade pip --timeout 300 && \
 COPY . .
 
 # Expose port
-EXPOSE 8000
+EXPOSE 9000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/ || exit 1
+    CMD curl -f http://localhost:9000/ || exit 1
 
 # Command to run the application
 CMD ["python", "main.py"]

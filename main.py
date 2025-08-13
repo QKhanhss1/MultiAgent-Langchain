@@ -251,17 +251,17 @@ def main():
     load_dotenv()
     
     print("🚀 Starting Multi-Agent Google Services API...")
-    print("📚 API Documentation: http://localhost:8000/docs")
-    print("🔧 Interactive API: http://localhost:8000/redoc")
-    print("💬 Chat endpoint: POST http://localhost:8000/chat")
-    print("📋 Available agents: GET http://localhost:8000/agents")
+    print("📚 API Documentation: http://localhost:9000/docs")
+    print("🔧 Interactive API: http://localhost:9000/redoc")
+    print("💬 Chat endpoint: POST http://localhost:9000/chat")
+    print("📋 Available agents: GET http://localhost:9000/agents")
     print("\n💡 Tip: Use --cli flag to run in CLI mode")
     
     # Run the FastAPI server
     uvicorn.run(
         "main:app",  # Use import string instead of app object
         host="0.0.0.0",
-        port=8000,
+        port=9000,
         reload=True,
         log_level="info"
     )

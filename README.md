@@ -9,7 +9,7 @@ A containerized API for managing Google Calendar, Tasks, and Gmail using AI agen
 docker-compose up -d
 
 # Test the API  
-curl http://localhost:8000/agents
+curl http://localhost:9000/agents
 
 # Stop the API
 docker-compose down
@@ -20,7 +20,7 @@ docker-compose down
 All endpoints require a Google OAuth access token:
 
 ```bash
-curl -X POST "http://localhost:8000/chat" \
+curl -X POST "http://localhost:9000/chat" \
   -H "Content-Type: application/json" \
   -d '{
     "message": "List my calendar events",
@@ -49,8 +49,8 @@ https://www.googleapis.com/auth/gmail.readonly
 
 ## 📚 Documentation
 
-- **API Docs**: http://localhost:8000/docs
-- **Interactive**: http://localhost:8000/redoc
+- **API Docs**: http://localhost:9000/docs
+- **Interactive**: http://localhost:9000/redoc
 
 ## 🛠 Development
 
