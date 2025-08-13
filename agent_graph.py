@@ -2,7 +2,7 @@ from typing import Annotated, Sequence, TypedDict
 from langchain_core.messages import BaseMessage, AIMessage
 from langgraph.graph import StateGraph, END
 from langgraph.prebuilt import ToolNode
-from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.graph.message import add_messages
 from config import MODEL_NAME, MODEL_TEMPERATURE
 import dotenv
@@ -18,7 +18,7 @@ def create_agent_with_token(tools: list, access_token: str):
     # The tools will expect the token to be provided by the agent call
     
     tool_node = ToolNode(tools)
-    model = ChatOpenAI(
+    model = ChatGoogleGenerativeAI(
         model=MODEL_NAME, 
         temperature=MODEL_TEMPERATURE,
     ).bind_tools(tools)
@@ -45,7 +45,7 @@ def create_agent(tools: list):
     Tạo và biên dịch một LangGraph Agent với một bộ công cụ được cung cấp.
     """
     tool_node = ToolNode(tools)
-    model = ChatOpenAI(
+    model = ChatGoogleGenerativeAI(
         model=MODEL_NAME, 
         temperature=MODEL_TEMPERATURE,
 
