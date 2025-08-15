@@ -1,5 +1,7 @@
 import datetime
 from typing import Optional, List
+import requests
+import json
 
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
@@ -12,6 +14,41 @@ from config import CALENDAR_ID
 # --- CÁC TOOLS CHO GOOGLE CALENDAR ---
 SERVICE_NAME = "calendar"
 VERSION = "v3"
+
+# InCard App API Configuration
+INCARD_BASE_URL = "https://stage.incard.biz/api/public-appointments"
+DEFAULT_USER_ID = 5089  # Default user ID for InCard app
+
+def call_incard_api(endpoint: str, data: dict) -> bool:
+    """Call InCard API with given endpoint and data."""
+    try:
+        url = f"{INCARD_BASE_URL}/{endpoint}"
+        headers = {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        }
+        response = requests.post(url, headers=headers, json=data, timeout=10)
+        response.raise_for_status()
+        return True
+    except Exception as e:
+        print(f"InCard API call failed: {e}")
+        return False
+
+def extract_time_from_datetime(datetime_str: str) -> str:
+    """Extract time in HH:MM format from ISO datetime string."""
+    try:
+        dt = datetime.datetime.fromisoformat(datetime_str.replace('Z', '+00:00'))
+        return dt.strftime("%H:%M")
+    except:
+        return "09:00"  # Default time
+
+def extract_date_from_datetime(datetime_str: str) -> str:
+    """Extract date in YYYY-MM-DD format from ISO datetime string."""
+    try:
+        dt = datetime.datetime.fromisoformat(datetime_str.replace('Z', '+00:00'))
+        return dt.strftime("%Y-%m-%d")
+    except:
+        return datetime.date.today().strftime("%Y-%m-%d")  # Default to today
 
 def get_calendar_service_with_token(access_token: str):
     """Create Google Calendar service using access token."""
@@ -99,7 +136,21 @@ def create_event(access_token: str, summary: str, start_time: str, end_time: str
             "attendees": [{"email": email} for email in attendees] if attendees else []
         }
         created_event = service.events().insert(calendarId=CALENDAR_ID, body=event_body).execute()
-        return f"Đã tạo thành công sự kiện '{created_event.get('summary')}' vào lúc {created_event['start'].get('dateTime')}."
+        
+        # Also create in InCard App
+        incard_data = {
+            "title": summary,
+            "date": extract_date_from_datetime(start_time),
+            "time": f"{extract_time_from_datetime(start_time)} {extract_time_from_datetime(end_time)}",
+            "note": description or "",
+            "user_id": DEFAULT_USER_ID,
+            "google_calendar_id": created_event.get('id')
+        }
+        
+        incard_success = call_incard_api("add", incard_data)
+        incard_status = " và đã đồng bộ với InCard app" if incard_success else " (lỗi đồng bộ InCard app)"
+        
+        return f"Đã tạo thành công sự kiện '{created_event.get('summary')}' vào lúc {created_event['start'].get('dateTime')}{incard_status}."
     except Exception as e:
         return f"Lỗi khi tạo sự kiện: {e}. Hãy chắc chắn access token còn hiệu lực."
 
@@ -127,7 +178,24 @@ def update_event(access_token: str, event_id: str, new_summary: Optional[str] = 
             event['attendees'] = [{"email": email} for email in new_attendees]
 
         updated_event = service.events().update(calendarId=CALENDAR_ID, eventId=event_id, body=event).execute()
-        return f"Đã cập nhật thành công sự kiện '{updated_event.get('summary')}'."
+        
+        # Also update in InCard App
+        start_datetime = updated_event['start'].get('dateTime', '')
+        end_datetime = updated_event['end'].get('dateTime', '')
+        
+        incard_data = {
+            "user_id": str(DEFAULT_USER_ID),
+            "note": updated_event.get('description', ''),
+            "date": extract_date_from_datetime(start_datetime),
+            "time": f"{extract_time_from_datetime(start_datetime)} {extract_time_from_datetime(end_datetime)}",
+            "title": updated_event.get('summary', ''),
+            "google_calendar_id": event_id
+        }
+        
+        incard_success = call_incard_api("update", incard_data)
+        incard_status = " và đã đồng bộ với InCard app" if incard_success else " (lỗi đồng bộ InCard app)"
+        
+        return f"Đã cập nhật thành công sự kiện '{updated_event.get('summary')}'{incard_status}."
     except HttpError as e:
         if e.resp.status == 404:
             return f"Lỗi: Không tìm thấy sự kiện với ID '{event_id}'."
@@ -144,8 +212,22 @@ def delete_event(access_token: str, event_id: str) -> str:
     """
     try:
         service = get_calendar_service_with_token(access_token)
+        
+        # Delete from InCard App first (before deleting from Google Calendar)
+        incard_data = {
+            "user_id": DEFAULT_USER_ID,
+            "created_by": DEFAULT_USER_ID,
+            "google_calendar_id": event_id
+        }
+        
+        incard_success = call_incard_api("delete", incard_data)
+        
+        # Then delete from Google Calendar
         service.events().delete(calendarId=CALENDAR_ID, eventId=event_id).execute()
-        return f"Đã xóa thành công sự kiện với ID: {event_id}."
+        
+        incard_status = " và đã xóa khỏi InCard app" if incard_success else " (lỗi xóa khỏi InCard app)"
+        
+        return f"Đã xóa thành công sự kiện với ID: {event_id}{incard_status}."
     except HttpError as e:
         if e.resp.status == 404:
             return f"Lỗi: Không tìm thấy sự kiện với ID '{event_id}' để xóa."

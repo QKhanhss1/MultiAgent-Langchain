@@ -1,0 +1,33 @@
+curl --location 'https://stage.incard.biz/api/public-appointments/update' \
+--header 'Accept: application/json' \
+--header 'Content-Type: application/json' \
+--data '{
+  "user_id": "5089",
+  "note": "",
+  "date":"2025-08-03",
+  "time": "18:00 19:00 ",
+  "title": "Hẹn gặp bác sĩ",
+  "google_calendar_id": "foki43j1e51iruqf75bu3qqupc"
+}'
+
+curl --location 'https://stage.incard.biz/api/public-appointments/add' \
+--header 'Accept: application/json' \
+--header 'Content-Type: application/json' \
+--data '{
+    "title": "Dancing to the sun",
+    "date": "2025-07-03",
+    "time": "10:30 14:00",
+    "note": "notes.....",
+    "user_id": 5089,
+    "google_calendar_id": "tlmm0h5kr1adpe5vrc1i6lnvu8"
+}'
+
+curl --location 'https://stage.incard.biz/api/public-appointments/delete' \
+--header 'Accept: application/json' \
+--header 'Content-Type: application/json' \
+--data '{
+    "user_id": 5089,
+    "created_by": 5089,
+    "google_calendar_id": "tlmm0h5kr1adpe5vrc1i6lnvu8"
+
+}'
