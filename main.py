@@ -11,19 +11,25 @@ from agent_graph import create_agent, create_agent_with_token
 from tools.google_tasks_tools import tasks_tools
 from tools.google_calendar_tools import calendar_tools
 from tools.google_gmail_tools import gmail_tools
+
+import os
+GOOGLE_TOKEN = os.getenv("GOOGLE_TOKEN")
+
 # API Models
 class ChatRequest(BaseModel):
     message: str
     agent_type: str  # "tasks", "calendar", or "gmail"
     conversation_id: str = "default"
-    token: str  # Authentication or session token
+    access_token: str  # Changed from 'token' to 'access_token' for clarity
+    user_id: int = 5089  # Default user ID for InCard integration
 
 class ChatResponse(BaseModel):
     response: str
     agent_type: str
     conversation_id: str
     timestamp: str
-    token: str  # Echo back the token for reference
+    user_id: int
+    access_token: str  # Echo back the token for reference
 
 class AgentListResponse(BaseModel):
     agents: List[Dict[str, str]]
@@ -51,15 +57,16 @@ def get_agent_tools_and_prompt(agent_type: str):
     
     return agent_map[agent_type]
 
-def load_and_format_prompt(prompt_file: str, access_token: str = None):
+def load_and_format_prompt(prompt_file: str, access_token: str = None, user_id: int = 5089):
     """Tải prompt từ file và điền các giá trị động."""
     with open(prompt_file, "r", encoding="utf-8") as f:
         prompt_template = f.read()
     
-    # Add token instruction to the prompt
+    # Add token and user_id instruction to the prompt
     token_instruction = ""
     if access_token:
         token_instruction = f"\n\n**QUAN TRỌNG: Bạn có access token sau để gọi Google APIs: {access_token}**"
+        token_instruction += f"\n**USER_ID cho InCard app: {user_id}**"
     
     formatted_prompt = prompt_template.format(
         current_time=datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=7))), 
@@ -92,22 +99,22 @@ async def get_available_agents():
 async def chat_with_agent(request: ChatRequest):
     """Chat with specified agent."""
     try:
-        # Validate token (you can add your own validation logic here)
-        if not request.token:
-            raise HTTPException(status_code=400, detail="Token is required")
+        # Validate access_token (you can add your own validation logic here)
+        if not request.access_token:
+            raise HTTPException(status_code=400, detail="Access token is required")
         
         # Get tools and prompt for the specified agent
         tools, prompt_file = get_agent_tools_and_prompt(request.agent_type)
         
         # Create agent
-        agent_app = create_agent_with_token(tools, request.token)
+        agent_app = create_agent_with_token(tools, request.access_token)
         
-        # Load and format prompt with token
-        formatted_prompt = load_and_format_prompt(prompt_file, request.token)
+        # Load and format prompt with token and user_id
+        formatted_prompt = load_and_format_prompt(prompt_file, request.access_token, request.user_id)
         system_prompt = SystemMessage(content=formatted_prompt)
         
-        # Get or create conversation history
-        conv_key = f"{request.agent_type}_{request.conversation_id}"
+        # Get or create conversation history (include user_id in key for isolation)
+        conv_key = f"{request.agent_type}_{request.conversation_id}_{request.user_id}"
         if conv_key not in conversation_histories:
             conversation_histories[conv_key] = []
         
@@ -135,7 +142,8 @@ async def chat_with_agent(request: ChatRequest):
             agent_type=request.agent_type,
             conversation_id=request.conversation_id,
             timestamp=datetime.datetime.now().isoformat(),
-            token=request.token
+            user_id=request.user_id,
+            access_token=request.access_token
         )
         
     except Exception as e:
@@ -211,14 +219,18 @@ def cli_mode():
             if not token:
                 print("Error: Access token is required for API access.")
                 continue
+            
+            # Get user ID for InCard integration (optional)
+            user_id_input = input("Enter your User ID for InCard (default: 5089): ").strip()
+            user_id = int(user_id_input) if user_id_input else 5089
                 
             tools, prompt_file = get_agent_tools_and_prompt(agent_type)
             agent_app = create_agent_with_token(tools, token)
-            formatted_prompt = load_and_format_prompt(prompt_file, token)
+            formatted_prompt = load_and_format_prompt(prompt_file, token, user_id)
             system_prompt = SystemMessage(content=formatted_prompt)
             
             conversation_history = []
-            print(f"\n{agent_type.title()} Agent ready. (type 'back' to choose another agent)")
+            print(f"\n{agent_type.title()} Agent ready (User ID: {user_id}). (type 'back' to choose another agent)")
             
             while True:
                 user_input = input(">> You: ")
@@ -236,17 +248,93 @@ def cli_mode():
                 except Exception as e:
                     print(f"Error: {e}")
                     
+        except ValueError:
+            print("Error: User ID must be a number.")
         except Exception as e:
             print(f"Error initializing agent: {e}")
+
+def test_mode():
+    """Test mode with predefined scenarios."""
+    load_dotenv()
+    
+    print("🧪 === TEST MODE ===")
+    print("Testing Multi-Agent API with predefined scenarios")
+    
+    # Test configuration
+    test_token = GOOGLE_TOKEN
+    test_user_id = 5089
+    
+    test_scenarios = [
+        {
+            "agent": "tasks",
+            "message": "List all my tasks",
+            "description": "Testing tasks agent - list tasks"
+        },
+        {
+            "agent": "calendar", 
+            "message": "Show my calendar events for today",
+            "description": "Testing calendar agent - list events"
+        },
+        {
+            "agent": "gmail",
+            "message": "Show my unread emails",
+            "description": "Testing gmail agent - unread emails"
+        },
+        {
+            "agent": "calendar",
+            "message": f"Create a new event: Test Meeting tomorrow at 10 AM to 11 AM with user_id {test_user_id}",
+            "description": "Testing calendar agent with InCard integration - create event"
+        }
+    ]
+    
+    print(f"📋 Running {len(test_scenarios)} test scenarios...")
+    print(f"🔑 Using test token: {test_token[:50]}...")
+    print(f"👤 Using user ID: {test_user_id}")
+    print("=" * 60)
+    
+    for i, scenario in enumerate(test_scenarios, 1):
+        print(f"\n🧪 Test {i}: {scenario['description']}")
+        print(f"🤖 Agent: {scenario['agent']}")
+        print(f"💬 Message: {scenario['message']}")
+        
+        try:
+            tools, prompt_file = get_agent_tools_and_prompt(scenario['agent'])
+            agent_app = create_agent_with_token(tools, test_token)
+            formatted_prompt = load_and_format_prompt(prompt_file, test_token, test_user_id)
+            system_prompt = SystemMessage(content=formatted_prompt)
+            
+            messages_for_graph = [
+                system_prompt,
+                HumanMessage(content=scenario['message'])
+            ]
+            
+            print("📡 Sending request to agent...")
+            final_state = agent_app.invoke({"messages": messages_for_graph})
+            ai_response = final_state['messages'][-1]
+            
+            print("✅ Response received:")
+            print(f"📥 {ai_response.content[:200]}...")
+            
+        except Exception as e:
+            print(f"❌ Test failed: {e}")
+        
+        print("-" * 60)
+    
+    print("\n🏁 All tests completed!")
+    print("💡 Use --cli for interactive mode or no flags for API server mode")
 
 def main():
     """API server main function."""
     import sys
     
-    # Check if CLI mode is requested
-    if len(sys.argv) > 1 and sys.argv[1] == "--cli":
-        cli_mode()
-        return
+    # Check command line arguments
+    if len(sys.argv) > 1:
+        if sys.argv[1] == "--cli":
+            cli_mode()
+            return
+        elif sys.argv[1] == "--test":
+            test_mode()
+            return
     
     load_dotenv()
     
@@ -255,7 +343,10 @@ def main():
     print("🔧 Interactive API: http://localhost:9000/redoc")
     print("💬 Chat endpoint: POST http://localhost:9000/chat")
     print("📋 Available agents: GET http://localhost:9000/agents")
-    print("\n💡 Tip: Use --cli flag to run in CLI mode")
+    print("\n💡 Usage modes:")
+    print("   python main.py          - Start API server")
+    print("   python main.py --cli    - Interactive CLI mode")
+    print("   python main.py --test   - Run predefined tests")
     
     # Run the FastAPI server
     uvicorn.run(
