@@ -3,7 +3,7 @@ google-auth-oauthlib
 google-auth-httplib2
 google-api-python-client
 langchain
-langchain-google-genai
+langchain-google-genai==2.1.9
 langchain-openai
 langgraph
 python-dotenv
