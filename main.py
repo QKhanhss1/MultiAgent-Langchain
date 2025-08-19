@@ -62,7 +62,6 @@ def get_agent_tools_and_prompt(agent_type: str):
     return agent_map[agent_type]
 
 def load_and_format_prompt(prompt_file: str, access_token: str = None, user_id: int = 5089):
-def load_and_format_prompt(prompt_file: str, access_token: str = None, user_id: int = 5089):
     """Tải prompt từ file và điền các giá trị động."""
     with open(prompt_file, "r", encoding="utf-8") as f:
         prompt_template = f.read()
@@ -158,10 +157,7 @@ async def chat_with_agent(request: ChatRequest):
             conversation_id=request.conversation_id,
             timestamp=datetime.datetime.now().isoformat(),
             user_id=request.user_id,
-            access_token=request.access_token
-            user_id=request.user_id,
-            access_token=request.access_token
-        )
+            access_token=request.access_token)
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing request: {str(e)}")
