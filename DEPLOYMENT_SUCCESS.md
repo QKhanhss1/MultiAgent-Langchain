@@ -1,33 +1,35 @@
-# ✅ Docker Deployment Complete!
+# Hướng dẫn build và deploy theo từng môi trường
 
-Your Multi-Agent API is successfully running in Docker with token-based authentication.
+## 1. Chuẩn bị file môi trường
 
-## 🚀 Quick Commands
+- Sử dụng một trong các file sau tuỳ môi trường:
+  - `.env.production` cho môi trường production
+  - `.env.staging` cho môi trường staging
 
-```bash
-# Start
-docker-compose up -d
+## 2. Build và chạy bằng Docker Compose
 
-# Test  
-curl http://localhost:9000/agents
-
-# Stop
-docker-compose down
+### Production
+```sh
+docker-compose --env-file .env.production up -d --build
 ```
 
-## 📡 API URL
-http://localhost:9000/docs
-
-## � Usage
-Send requests with your Google OAuth access token:
-
-```json
-{
-  "message": "List my events", 
-  "agent_type": "calendar",
-  "conversation_id": "session-123",
-  "token": "your_google_oauth_token"
-}
+### Staging
+```sh
+docker-compose --env-file .env.staging up -d --build
 ```
 
-**Your API is ready for production deployment!** 🎉
+## 3. Kiểm tra container
+
+- Xem logs:
+  ```sh
+  docker-compose logs -f ${CONTAINER_NAME}
+  ```
+- Kiểm tra API:
+  ```sh
+  curl http://localhost:${PORT}/
+  ```
+
+## 4. Lưu ý
+- Thay đổi file `.env` trước khi build để đúng môi trường.
+- Các biến PORT, CONTAINER_NAME sẽ được lấy tự động từ file `.env`.
+- Có thể thêm biến khác vào file `.env.production` hoặc `.env.staging` nếu cần.

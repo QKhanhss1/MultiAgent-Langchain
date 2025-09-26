@@ -63,7 +63,6 @@ def load_and_format_prompt(prompt_file: str, access_token: str = None, user_id: 
         prompt_template = f.read()
     
     # Add token and user_id instruction to the prompt
-    # Add token and user_id instruction to the prompt
     token_instruction = ""
     if access_token:
         token_instruction = f"\n\n**QUAN TRỌNG: Bạn có access token sau để gọi Google APIs: {access_token}**"
@@ -100,9 +99,6 @@ async def get_available_agents():
 async def chat_with_agent(request: ChatRequest):
     """Chat with specified agent."""
     try:
-        # Validate access_token (you can add your own validation logic here)
-        if not request.access_token:
-            raise HTTPException(status_code=400, detail="Access token is required")
         # Validate access_token (you can add your own validation logic here)
         if not request.access_token:
             raise HTTPException(status_code=400, detail="Access token is required")
@@ -147,7 +143,8 @@ async def chat_with_agent(request: ChatRequest):
             conversation_id=request.conversation_id,
             timestamp=datetime.datetime.now().isoformat(),
             user_id=request.user_id,
-            access_token=request.access_token)
+            access_token=request.access_token
+        )
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing request: {str(e)}")
@@ -226,7 +223,6 @@ def cli_mode():
             # Get user ID for InCard integration (optional)
             user_id_input = input("Enter your User ID for InCard (default: 5089): ").strip()
             user_id = int(user_id_input) if user_id_input else 5089
-            
                 
             tools, prompt_file = get_agent_tools_and_prompt(agent_type)
             agent_app = create_agent_with_token(tools, token)
